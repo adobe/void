@@ -1,0 +1,16 @@
+[package]
+name = "void"
+version = "0.1.0"
+authors = ["Hari Bhaskaran <hbhaskaran@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hyper = "0.13.6"
+tokio = { version = "0.2.21", features = ["macros", "rt-threaded", "fs"] }
+flatbuffers = "0.6.1"
+lz4 = "1.23.2"
+lazy_static = "1.4.0"
+object-pool = "0.5.3"
+crossbeam = "0.7.3"
