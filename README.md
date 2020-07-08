@@ -32,7 +32,6 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
 
 ### State of the code
 
-* `main.rs` is pretty simple - deals just with the creation of a channel, hyper serving endpoint and handlers.
+* `main.rs` is pretty simple - deals just with the creation of a channel, hyper serving endpoint and a single handler that accept any path any host.
 * Two variants `attempt1.rs` and `attempt2.rs` based on which line is uncommented in main.rs at lines 51/52 and lines 83/84.
 * Please note that line 44 doesn't define the type of the channel contents. The type changes depending on which `attempt?.rs` is called (via uncommenting). This is because of [fancy type-inference](https://news.ycombinator.com/item?id=15301620) done by Rust based on actual usage several statements or methods later
-
