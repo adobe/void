@@ -17,7 +17,7 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
  * The overall design is trying to mimic the design from the Go version. Reasons are below
  ![Design](https://raw.githubusercontent.com/adobe/blackhole/master/design.png)
 
-    * Writing to single file should be done from single writer, ideally. Regardless of whether it is Go or Rust. Source of the data is from http handlers, who clearly will be multi-threaded (real or green). The `channel` is serving as the place to have `multiple-producer-single-consumer` (referred to as mpsc in Rust terminology)
+    * Writing to single file should be done from single writer, ideally, regardless of whether it is Go or Rust. Source of the data is from http handlers, which clearly will be multi-threaded (real or green). The `channel` is serving as the place to have `multiple-producer-single-consumer` (referred to as mpsc in Rust terminology)
     * Using a mutex for i/o would invalidate the `async` advantage provider by `hyper`
     * The code is actually using `mpmc` (multiple consumers) from `crossbeam` crate. Mainly because I wanted to have data split to multiple files. It is unproven multiple parallel writers actually give better performance than a single writer for ssd/nvme type storage. Go version did show improvement with more than one writer. More about these choices later. Just keep in mind that `crossbeam` channel API is not `async`-compatible afaik. `tokio::sync::mpsc` allows only a single writer. Tokio does not have a `mpmc` variant.
 
@@ -27,7 +27,7 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
     * any performance difference between Rust implementation of [lz4](https://crates.io/crates/lz4)  vs [Go](https://github.com/pierrec/lz4) implementation 
     * general awkwardness of non-idiomatic Rust code written by a Gopher who doesn't know how to properly profile Rust code.
     * Incorrect use of [pool](https://crates.io/crates/object-pool) in a situation that probably doesn't need a pool? Pool usage seems to improve performance, but I have not yet verified it actually reduces allocations.
-    * Should pool transfer a `Vec[u8]` or the finished flatbuffer bytes OR should it be a `builder` object like the Go implementation.
+    * Should channel transfer a `Vec[u8]` of the finished flatbuffer bytes [ No pool, [attempt1.rs](src/attempt1.rs) ] OR should it be a `builder` object taken from a pool, [attempt2.rs](src/attempt2.rs), like the Go implementation.
 
 
 ### State of the code
