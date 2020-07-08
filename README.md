@@ -1,4 +1,4 @@
-# void - A Rust port of https://github.com/adobe/blackhole - WIP
+# void - A Rust port of [blackhole](https://github.com/adobe/blackhole) - WIP
 
 ### Introduction
 
