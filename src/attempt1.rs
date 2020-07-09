@@ -11,57 +11,64 @@ governing permissions and limitations under the License.
 */
 
 use crossbeam::channel::{Receiver, Sender};
-use hyper::{Body, Request, Response};
 use hyper::body::Buf;
+use hyper::{Body, Request, Response};
 use lz4;
-use std::io::Write;
 use std::convert::Infallible;
+use std::io::Write;
 
 #[allow(dead_code)] // when attempt2 is being tried, this won't be used
 pub async fn handle(
     req: Request<Body>,
+    record: bool,
     tx: Sender<Vec<u8>>,
 ) -> Result<Response<Body>, Infallible> {
-    let mut builder = flatbuffers::FlatBufferBuilder::new_with_capacity(4096);
+    if record {
+        let mut builder = flatbuffers::FlatBufferBuilder::new_with_capacity(4096);
 
-    let id = builder.create_string("");
-    let method = builder.create_string(req.method().as_str());
-    let uri = builder.create_string(&req.uri().to_string());
+        let id = builder.create_string("");
+        let method = builder.create_string(req.method().as_str());
+        let uri = builder.create_string(&req.uri().to_string());
 
-    // figure out how to read raw header bytes
-    let headers = builder.create_string("");
+        // figure out how to read raw header bytes
+        let headers = builder.create_string("");
 
-    let body = hyper::body::to_bytes::<Body>(req.into_body())
-        .await
-        .expect("Reading body failed");
+        let body = hyper::body::to_bytes::<Body>(req.into_body())
+            .await
+            .expect("Reading body failed");
 
-    let body = builder.create_vector::<u8>(body.bytes());
+        let body = builder.create_vector::<u8>(body.bytes());
 
-    let buf = super::request_generated::fbr::Request::create(
-        &mut builder,
-        &super::request_generated::fbr::RequestArgs {
-            id: Some(id),
-            method: Some(method),
-            body: Some(body),
-            headers: Some(headers),
-            uri: Some(uri),
-        },
-    );
+        let buf = super::request_generated::fbr::Request::create(
+            &mut builder,
+            &super::request_generated::fbr::RequestArgs {
+                id: Some(id),
+                method: Some(method),
+                body: Some(body),
+                headers: Some(headers),
+                uri: Some(uri),
+            },
+        );
 
-    builder.finish(buf, None);
-    let finished_bytes_vec = builder.finished_data().to_vec().clone();
-    tx.send(finished_bytes_vec)
-        .expect("unable to write to channel");
+        builder.finish(buf, None);
+        let finished_bytes_vec = builder.finished_data().to_vec().clone();
+        tx.send(finished_bytes_vec)
+            .expect("unable to write to channel");
+    }
 
     let resp_message = "OK\n";
     Ok(Response::new(resp_message.into()))
 }
 
 #[allow(dead_code)] // when attempt2 is being tried, this won't be used
-pub fn recorder(file_name: String, rx: Receiver<Vec<u8>>) {
+pub fn recorder(file_name: std::path::PathBuf, rx: Receiver<Vec<u8>>) {
     println!("Starting recorder");
 
     // let mut file = std::fs::File::create(file_name).expect("Unable to create file");
+
+    let file_name = file_name
+        .to_str()
+        .expect("utf-8 filename not supported yet");
 
     let file = std::fs::File::create(file_name).expect("Unable to create file");
 

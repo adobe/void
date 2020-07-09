@@ -11,52 +11,54 @@ governing permissions and limitations under the License.
 */
 
 use crossbeam::channel::{Receiver, Sender};
-use hyper::{Body, Request, Response};
 use hyper::body::Buf;
+use hyper::{Body, Request, Response};
 use lz4;
-use std::io::Write;
 use std::convert::Infallible;
+use std::io::Write;
 
 #[allow(dead_code)] // when attempt1 is being tried, this won't be used
 pub async fn handle(
     req: Request<Body>,
+    record: bool,
     tx: Sender<Box<flatbuffers::FlatBufferBuilder<'static>>>,
 ) -> Result<Response<Body>, Infallible> {
+    if record {
+        // let mut builder = Box::new(flatbuffers::FlatBufferBuilder::new_with_capacity(4096));
+        let mut builder = super::POOL
+            .try_pull()
+            .expect("unable to get item from pool");
+        builder.reset();
+        let (_, mut builder) = builder.detach();
 
-    // let mut builder = Box::new(flatbuffers::FlatBufferBuilder::new_with_capacity(4096));
-    let mut builder = super::POOL.try_pull().expect("unable to get item from pool");
-    builder.reset();
-    let (_, mut  builder) = builder.detach();
+        let id = builder.create_string("");
+        let method = builder.create_string(req.method().as_str());
+        let uri = builder.create_string(&req.uri().to_string());
 
-    let id = builder.create_string("");
-    let method = builder.create_string(req.method().as_str());
-    let uri = builder.create_string(&req.uri().to_string());
+        // figure out how to read raw header bytes
+        let headers = builder.create_string("");
 
-    // figure out how to read raw header bytes
-    let headers = builder.create_string("");
+        let body = hyper::body::to_bytes::<Body>(req.into_body())
+            .await
+            .expect("Reading body failed");
 
-    let body = hyper::body::to_bytes::<Body>(req.into_body())
-        .await
-        .expect("Reading body failed");
+        let body = builder.create_vector::<u8>(body.bytes());
 
-    let body = builder.create_vector::<u8>(body.bytes());
+        let buf = super::request_generated::fbr::Request::create(
+            &mut builder,
+            &super::request_generated::fbr::RequestArgs {
+                id: Some(id),
+                method: Some(method),
+                body: Some(body),
+                headers: Some(headers),
+                uri: Some(uri),
+            },
+        );
 
-    let buf = super::request_generated::fbr::Request::create(
-        &mut builder,
-        &super::request_generated::fbr::RequestArgs {
-            id: Some(id),
-            method: Some(method),
-            body: Some(body),
-            headers: Some(headers),
-            uri: Some(uri),
-        },
-    );
-
-    builder.finish(buf, None);
-    // let finished_bytes_vec = builder.finished_data().to_vec().clone();
-    tx.send(builder)
-        .expect("unable to write to channel");
-
+        builder.finish(buf, None);
+        // let finished_bytes_vec = builder.finished_data().to_vec().clone();
+        tx.send(builder).expect("unable to write to channel");
+    }
     let resp_message = "OK\n";
     Ok(Response::new(resp_message.into()))
 }
@@ -79,9 +81,7 @@ pub fn recorder(file_name: String, rx: Receiver<Box<flatbuffers::FlatBufferBuild
 
     while let Ok(builder) = rx.recv() {
         let finished_data = builder.finished_data();
-        encoder
-            .write(finished_data)
-            .expect("write failed");
+        encoder.write(finished_data).expect("write failed");
 
         total_received += 1;
         total_size += finished_data.len();
