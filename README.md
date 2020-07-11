@@ -29,6 +29,9 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
     * Incorrect use of [pool](https://crates.io/crates/object-pool) in a situation that probably doesn't need a pool? Pool usage seems to improve performance, but I have not yet verified it actually reduces allocations.
     * Should channel transfer a `Vec[u8]` of the finished flatbuffer bytes [ No pool, [attempt1.rs](src/attempt1.rs) ] OR should it be a `builder` object taken from a pool, [attempt2.rs](src/attempt2.rs), like the Go implementation.
 
+  * Benchmarking setup
+    * Server: `ulimit -n 4096 && target/release/void record -o /tmp/requests -t 5`
+    * Client: `ulimit -n 4096 && wrk -t20 -c200 -s post-random.lua -d1m http://127.0.0.1:3000/index.html`
 
 ### State of the code
 
