@@ -2,7 +2,7 @@
 
 ### Introduction
 
-void is an HTTP sink, to be used for testing & protoyping. Good for testing your outgoing http senders (proxies, http forwarders etc). It is a port of a Golang implementation at the link below.
+void is an HTTP sink, to be used for testing & protoyping. Good for testing your outgoing http senders (proxies, http forwarders etc) or to collect samples from incoming requests to your real webserver when paired with a tool like [tcpcopy](https://github.com/session-replay-tools/tcpcopy). It is a port of a Golang implementation at the link below.
 
 Please see introduction in the [blackhole](https://github.com/adobe/blackhole#introduction) repository
 
