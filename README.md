@@ -10,9 +10,9 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
 
 ### Outstanding items (Specific to the task of porting to Rust)
 
- * CLI interface/options are not implemented yet, but irrelevant for now. The code always saves to current directory with hardcoded filenames.
+ * ~~CLI interface/options are not implemented yet, but irrelevant for now. The code always saves to current directory with hardcoded filenames.~~
 
- * File format and contents have not been verified to be compatible with the Go version or the `replay` tool. There is no plan to make a Rust version of the `replay` tool - currently performance is not critical for replay.
+ * File format and contents have not been verified to be compatible with the Go version or the `replay` tool. The tool does not even save headers yet. There is no plan to make a Rust version of the `replay` tool - currently performance is not critical for replay.
 
  * The overall design is trying to mimic the design from the Go version. Reasons are below
  ![Design](https://raw.githubusercontent.com/adobe/blackhole/master/design.png)

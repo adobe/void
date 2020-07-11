@@ -82,7 +82,6 @@ async fn main() {
         // the new `tx` will be tied to the scope of the closure and not to
         // caller, `main`. This must be outside out `async` block below.
         // that is it must be done *now*, not in future.
-        let record = record.clone();
         let tx = tx.clone();
 
         // tx is now a separate clone for each instance of http-connection
