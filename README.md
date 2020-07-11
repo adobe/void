@@ -21,8 +21,9 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
     * Using a mutex for i/o would invalidate the `async` advantage provider by `hyper`
     * The code is actually using `mpmc` (multiple consumers) from `crossbeam` crate. Mainly because I wanted to have data split to multiple files. It is unproven multiple parallel writers actually give better performance than a single writer for ssd/nvme type storage. Go version did show improvement with more than one writer. More about these choices later. Just keep in mind that `crossbeam` channel API is not `async`-compatible afaik. `tokio::sync::mpsc` allows only a single writer. Tokio does not have a `mpmc` variant.
 
- * Performance is only 70% of that of the Go version. It is unclear at this point whether it is
-    * fasthttp vs hyper?
+ * Performance is only 70% of that of the Go version when recording is enabled. It is unclear at this point whether it is
+    * Some issue with the way the test is run using `wrk` (see next section)
+    * fasthttp vs hyper? (Unlikely - Rust version is faster is recording is skipped - `serve` subcommand)
     * Use of blocking API (for channel write) from an async handler of hyper. Hoping it is not that bad since write to a buffered channel should be fast?.
     * any performance difference between Rust implementation of [lz4](https://crates.io/crates/lz4)  vs [Go](https://github.com/pierrec/lz4) implementation 
     * general awkwardness of non-idiomatic Rust code written by a Gopher who doesn't know how to properly profile Rust code.
@@ -31,6 +32,7 @@ NOTE: This is done as a learning exercise to evaluate Rust for a different proje
 
   * Benchmarking setup
     * Server: `ulimit -n 4096 && target/release/void record -o /tmp/requests -t 5`
+    * Server (without recording): `ulimit -n 4096 && target/release/void serve`
     * Client: `ulimit -n 4096 && wrk -t20 -c200 -s post-random.lua -d1m http://127.0.0.1:3000/index.html`
 
 ### State of the code
