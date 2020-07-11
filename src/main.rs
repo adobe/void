@@ -44,7 +44,7 @@ lazy_static! {
 async fn main() {
     let matches = cli::args();
 
-    let (tx, rx) = crossbeam::channel::bounded(100);
+    let (tx, rx) = crossbeam::channel::bounded(10000);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
