@@ -16,3 +16,6 @@ object-pool = "0.5.3"
 crossbeam = "0.7.3"
 clap = "2.33.1"
 rand = "0.7.3"
+
+[profile.release]
+debug=true

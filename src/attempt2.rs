@@ -64,8 +64,13 @@ pub async fn handle(
 }
 
 #[allow(dead_code)] // when attempt1 is being tried, this won't be used
-pub fn recorder(file_name: String, rx: Receiver<Box<flatbuffers::FlatBufferBuilder<'static>>>) {
+pub fn recorder(file_name: std::path::PathBuf, rx: Receiver<Box<flatbuffers::FlatBufferBuilder<'static>>>) {
     println!("Starting recorder");
+
+    let file_name = file_name
+    .to_str()
+    .expect("utf-8 filename not supported yet");
+
 
     // let mut file = std::fs::File::create(file_name).expect("Unable to create file");
 

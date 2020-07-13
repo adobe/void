@@ -35,7 +35,7 @@ lazy_static! {
     */
 
         static ref POOL: Arc<Pool<Box<flatbuffers::FlatBufferBuilder<'static>>>> =
-        Arc::new(Pool::new(1000, || {
+        Arc::new(Pool::new(10000, || {
             Box::new(flatbuffers::FlatBufferBuilder::new_with_capacity(4096))
         }));
 }
@@ -69,8 +69,8 @@ async fn main() {
             let rx = rx.clone();
             let file_name = format!("requests_{}_{}.data", i, rand_suffix);
             let fqdn = Path::new(output_directory).join(file_name);
-            // task::spawn_blocking(move || attempt2::recorder(fqdn, rx));
-            task::spawn_blocking(move || attempt1::recorder(fqdn, rx));
+            task::spawn_blocking(move || attempt2::recorder(fqdn, rx));
+            //task::spawn_blocking(move || attempt1::recorder(fqdn, rx));
         }
     }
 
@@ -87,8 +87,8 @@ async fn main() {
         // tx is now a separate clone for each instance of http-connection
         async move {
             Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
-                // attempt2::handle(req, tx.clone())
-                attempt1::handle(req, record, tx.clone())
+                attempt2::handle(req, record, tx.clone())
+                //attempt1::handle(req, record, tx.clone())
             }))
         }
     });
