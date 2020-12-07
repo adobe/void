@@ -10,18 +10,19 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-use crossbeam::channel::{Receiver, Sender};
 use hyper::body::Buf;
 use hyper::{Body, Request, Response};
 use lz4;
 use std::convert::Infallible;
 use std::io::Write;
+use tempfile::Builder;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 #[allow(dead_code)] // when attempt1 is being tried, this won't be used
 pub async fn handle(
     req: Request<Body>,
     record: bool,
-    tx: Sender<Box<flatbuffers::FlatBufferBuilder<'static>>>,
+    mut tx: Sender<Box<flatbuffers::FlatBufferBuilder<'static>>>,
 ) -> Result<Response<Body>, Infallible> {
     if record {
         // let mut builder = Box::new(flatbuffers::FlatBufferBuilder::new_with_capacity(4096));
@@ -57,24 +58,27 @@ pub async fn handle(
 
         builder.finish(buf, None);
         // let finished_bytes_vec = builder.finished_data().to_vec().clone();
-        tx.send(builder).expect("unable to write to channel");
+        tx.send(builder).await.expect("Unable to send to channel");
     }
     let resp_message = "OK\n";
     Ok(Response::new(resp_message.into()))
 }
 
 #[allow(dead_code)] // when attempt1 is being tried, this won't be used
-pub fn recorder(file_name: std::path::PathBuf, rx: Receiver<Box<flatbuffers::FlatBufferBuilder<'static>>>) {
+pub async fn recorder(
+    output_directory: String,
+    mut rx: Receiver<Box<flatbuffers::FlatBufferBuilder<'static>>>,
+) {
     println!("Starting recorder");
 
-    let file_name = file_name
-    .to_str()
-    .expect("utf-8 filename not supported yet");
+    let file = Builder::new()
+        .prefix("requests_")
+        .suffix(".data.lz4")
+        .rand_bytes(5)
+        .tempfile_in(output_directory)
+        .expect("Unable to create temp file");
 
-
-    // let mut file = std::fs::File::create(file_name).expect("Unable to create file");
-
-    let file = std::fs::File::create(file_name).expect("Unable to create file");
+    let filename = file.path().to_string_lossy().to_string();
 
     let mut encoder = lz4::EncoderBuilder::new()
         .level(0)
@@ -84,18 +88,22 @@ pub fn recorder(file_name: std::path::PathBuf, rx: Receiver<Box<flatbuffers::Fla
     let mut total_received: i32 = 0;
     let mut total_size = 0;
 
-    while let Ok(builder) = rx.recv() {
+    println!("Saving requests to {} ...", filename);
+
+    while let Some(builder) = rx.recv().await {
         let finished_data = builder.finished_data();
         encoder.write(finished_data).expect("write failed");
 
         total_received += 1;
         total_size += finished_data.len();
-        if total_received % 100000 == 0 {
-            println!("Saved {} requests", total_received);
+        if total_received % 10000 == 0 {
+            println!("Saved {} requests to {}", total_received, filename);
         }
+        /* doesn't work - we can't expect size to be rounded number
         if total_size % 10000000 == 0 {
             println!("Saved {} bytes", total_size);
         }
+        */
         super::POOL.attach(builder) // return builder to the pool
     }
 

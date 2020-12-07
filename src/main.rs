@@ -13,8 +13,6 @@ governing permissions and limitations under the License.
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Server};
 use object_pool::Pool;
-use rand::Rng;
-use std::path::Path;
 use std::sync::Arc;
 use std::{convert::Infallible, net::SocketAddr};
 use tokio::task;
@@ -35,7 +33,7 @@ lazy_static! {
     */
 
         static ref POOL: Arc<Pool<Box<flatbuffers::FlatBufferBuilder<'static>>>> =
-        Arc::new(Pool::new(10000, || {
+        Arc::new(Pool::new(100000, || {
             Box::new(flatbuffers::FlatBufferBuilder::new_with_capacity(4096))
         }));
 }
@@ -44,34 +42,16 @@ lazy_static! {
 async fn main() {
     let matches = cli::args();
 
-    let (tx, rx) = crossbeam::channel::bounded(10000);
-
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
     let mut record = false;
-
+    let mut output_directory = "";
     if let Some(matches) = matches.subcommand_matches("record") {
         record = true;
 
-        let thread_count = matches
-            .value_of("threads")
-            .expect("Unexpected! threads is supposed to have a default");
-
-        let output_directory = matches
+        output_directory = matches
             .value_of("output")
             .expect("Unexpected! `output` is marked required!");
-
-        let thread_count = thread_count.parse::<u32>().expect("invalid number");
-        let mut rng = rand::thread_rng();
-
-        for i in 0..thread_count {
-            let rand_suffix: u16 = rng.gen();
-            let rx = rx.clone();
-            let file_name = format!("requests_{}_{}.data", i, rand_suffix);
-            let fqdn = Path::new(output_directory).join(file_name);
-            task::spawn_blocking(move || attempt2::recorder(fqdn, rx));
-            //task::spawn_blocking(move || attempt1::recorder(fqdn, rx));
-        }
     }
 
     // let make_svc = make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(handle)) });
@@ -82,7 +62,11 @@ async fn main() {
         // the new `tx` will be tied to the scope of the closure and not to
         // caller, `main`. This must be outside out `async` block below.
         // that is it must be done *now*, not in future.
-        let tx = tx.clone();
+        let (tx, rx) = tokio::sync::mpsc::channel(1000);
+
+        let output_directory = output_directory.to_string().to_string();
+
+        task::spawn(async move { attempt2::recorder(output_directory, rx).await });
 
         // tx is now a separate clone for each instance of http-connection
         async move {
