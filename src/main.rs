@@ -19,6 +19,8 @@ use tokio::task;
 
 mod attempt1;
 mod attempt2;
+mod attempt3;
+mod attempt4;
 mod cli;
 mod request_generated;
 
@@ -44,7 +46,7 @@ async fn main() {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
-    let mut record = false;
+    let mut record = true;
     let mut output_directory = "";
     if let Some(matches) = matches.subcommand_matches("record") {
         record = true;
@@ -64,14 +66,14 @@ async fn main() {
         // that is it must be done *now*, not in future.
         let (tx, rx) = tokio::sync::mpsc::channel(1000);
 
-        let output_directory = output_directory.to_string().to_string();
+        let output_directory = output_directory.to_string();
 
-        task::spawn(async move { attempt2::recorder(output_directory, rx).await });
+        task::spawn(async move { attempt4::recorder(output_directory, rx).await });
 
         // tx is now a separate clone for each instance of http-connection
         async move {
             Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
-                attempt2::handle(req, record, tx.clone())
+                attempt4::handle(req, record, tx.clone())
                 //attempt1::handle(req, record, tx.clone())
             }))
         }
