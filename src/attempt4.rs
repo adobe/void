@@ -105,7 +105,10 @@ pub async fn recorder(
     while let Some(builder) = rx.recv().await {
         let finished_data = builder.finished_data();
         println!("About to write >{:?}<", finished_data);
-        encoder.write(finished_data).expect("write failed");
+        async {
+            encoder.write(finished_data).expect("write failed");
+        }
+        .await;
 
         total_received += 1;
         total_size += finished_data.len();
